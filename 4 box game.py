@@ -59,27 +59,82 @@ if 'questions' not in st.session_state:
         {"q": "සූර්යයා යනු කුමක්ද?", "o": ["ග්‍රහලෝකයක්", "තරුවක්", "උපග්‍රහයෙක්", "ග්‍රහකයක්"], "a": "තරුවක්"}
     ]
 
-# Session state පාලනය (වැදගත්!)
+# Session state එක හරියටම set කිරීම
 if 'q_no' not in st.session_state:
     st.session_state.q_no = 0
     st.session_state.score = 0
     st.session_state.status = "boxes"
     st.session_state.target_box = random.randint(1, 4)
+    st.session_state.answered = False
 
-# UI ආරම්භය
+# UI
 st.title("🎓 Smart Student - Mystery Quiz 🏆")
 
 if st.session_state.q_no < len(st.session_state.questions):
     q_idx = st.session_state.q_no
     current_q = st.session_state.questions[q_idx]
 
-    st.subheader(f"ප්‍රශ්න අංකය: {q_idx + 1} / 20")
+    st.subheader(f"ප්‍රශ්නය: {q_idx + 1} / 20")
     st.progress((q_idx + 1) / 20)
     st.write(f"**ලකුණු: {st.session_state.score}**")
 
-    # පියවර 1: කොටු පෙන්වීම (සෑම ප්‍රශ්නයකටම පෙර)
+    # 1. කොටු පෙන්වන අවස්ථාව
     if st.session_state.status == "boxes":
-        st.info("ප්‍රශ්නය ඇති කොටුව සොයන්න! (එක කොටුවක පමණක් ප්‍රශ්නය ඇත)")
+        st.info("ප්‍රශ්නය ඇති කොටුව සොයන්න!")
         cols = st.columns(4)
         for i in range(4):
-            if cols[i].button(f"🎁\nBox {
+            if cols[i].button(f"🎁\nBox {i+1}", key=f"bx_{q_idx}_{i}"):
+                if (i + 1) == st.session_state.target_box:
+                    st.session_state.status = "question"
+                else:
+                    st.session_state.status = "skipped"
+                st.rerun()
+
+    # 2. වැරදි කොටුවක් තේරුවොත්
+    elif st.session_state.status == "skipped":
+        st.error("අපොයි! මේ කොටුවේ ප්‍රශ්නය නැහැ. ❌")
+        if st.button("ඊළඟ කොටු තෝරන්න ➡️"):
+            st.session_state.q_no += 1
+            st.session_state.status = "boxes"
+            st.session_state.target_box = random.randint(1, 4)
+            st.rerun()
+
+    # 3. හරි කොටුව තේරුවොත්
+    elif st.session_state.status == "question":
+        st.success("නියමයි! ප්‍රශ්නය හමුවුණා. 🎉")
+        st.markdown(f"<div class='question-style'>{current_q['q']}</div>", unsafe_allow_html=True)
+        
+        # 'answered' state එක පාවිච්චි කරලා බොත්තම් මාරු කරනවා
+        if not st.session_state.answered:
+            ans = st.radio("නිවැරදි පිළිතුර තෝරන්න:", current_q['o'], index=None)
+            if st.button("පිළිතුර තහවුරු කරන්න ✅"):
+                if ans:
+                    if ans == current_q['a']:
+                        st.session_state.score += 1
+                        st.balloons()
+                        st.success("නිවැරදියි! 🎉")
+                    else:
+                        st.error(f"වැරදියි! නිවැරදි පිළිතුර: {current_q['a']}")
+                    st.session_state.answered = True
+                    st.rerun()
+                else:
+                    st.warning("කරුණාකර පිළිතුරක් තෝරන්න.")
+        else:
+            # පිළිතුර දුන් පසු පමණක් මේ බොත්තම එනවා
+            if st.button("ඊළඟ කොටු තේරීමට යන්න ➡️"):
+                st.session_state.q_no += 1
+                st.session_state.status = "boxes"
+                st.session_state.target_box = random.randint(1, 4)
+                st.session_state.answered = False
+                st.rerun()
+
+else:
+    st.title("🎊 තරගය අවසන්! 🎊")
+    st.header(f"ඔබේ අවසන් ලකුණු: {st.session_state.score} / 20")
+    if st.button("නැවත ආරම්භ කරන්න 🔄"):
+        st.session_state.q_no = 0
+        st.session_state.score = 0
+        st.session_state.status = "boxes"
+        st.session_state.target_box = random.randint(1, 4)
+        st.session_state.answered = False
+        st.rerun()
